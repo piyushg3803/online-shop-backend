@@ -70,7 +70,7 @@ The data should be sent as JSON with the following fields:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.post("https://ecom-qybu.onrender.com/api/auth/user/register", {
+axios.post("https://online-shop-backend-qpnv.onrender.com/api/auth/user/register", {
     name: "John Doe",
     email: "johndoe@example.com",
     phone: "1234567890",
@@ -147,7 +147,7 @@ The data should be sent as JSON with the following fields:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.post("https://ecom-qybu.onrender.com/api/auth/user/login", {
+axios.post("https://online-shop-backend-qpnv.onrender.com/api/auth/user/login", {
     login: "johndoe@example.com",
     password: "securepassword"
 })
@@ -208,7 +208,7 @@ None required
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get("https://ecom-qybu.onrender.com/api/auth/user/logout", {
+axios.get("https://online-shop-backend-qpnv.onrender.com/api/auth/user/logout", {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -278,7 +278,7 @@ None required
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get("https://ecom-qybu.onrender.com/api/auth/user/profile", {
+axios.get("https://online-shop-backend-qpnv.onrender.com/api/auth/user/profile", {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -356,7 +356,7 @@ The data should be sent as JSON with the following fields:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.put("https://ecom-qybu.onrender.com/api/auth/user/profile", 
+axios.put("https://online-shop-backend-qpnv.onrender.com/api/auth/user/profile", 
 {
     name: "Updated Name",
     email: "updated@example.com",
@@ -475,7 +475,7 @@ The data should be sent as form-data with the following field:
 const formData = new FormData();
 formData.append('profileImage', imageFile);
 
-axios.patch("https://ecom-qybu.onrender.com/api/auth/user/profile-image", 
+axios.patch("https://online-shop-backend-qpnv.onrender.com/api/auth/user/profile-image", 
     formData,
     {
         headers: {
@@ -557,7 +557,7 @@ The data should be sent as JSON with the following fields:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.put("https://ecom-qybu.onrender.com/api/auth/user/password-update",
+axios.put("https://online-shop-backend-qpnv.onrender.com/api/auth/user/password-update",
 {
     oldPassword: "currentPassword123",
     newPassword: "newPassword123"
@@ -628,7 +628,7 @@ The data should be sent as JSON with the following field:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.post("https://ecom-qybu.onrender.com/api/auth/user/password-forgot", {
+axios.post("https://online-shop-backend-qpnv.onrender.com/api/auth/user/password-forgot", {
     email: "user@example.com"
 })
 .then(response => console.log(response.data))
@@ -698,7 +698,7 @@ The data should be sent as JSON with the following fields:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.put(`https://ecom-qybu.onrender.com/api/auth/user/password-reset/${resetToken}`, {
+axios.put(`https://online-shop-backend-qpnv.onrender.com/api/auth/user/password-reset/${resetToken}`, {
     newPassword: "newSecurePassword",
     confirmPassword: "newSecurePassword"
 })
@@ -779,7 +779,7 @@ This endpoint allows administrators to retrieve a list of all users in the syste
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get("https://ecom-qybu.onrender.com/api/auth/admin/users", {
+axios.get("https://online-shop-backend-qpnv.onrender.com/api/auth/admin/users", {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -861,7 +861,7 @@ This endpoint allows administrators to retrieve details of a specific user. Only
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get(`https://ecom-qybu.onrender.com/api/auth/admin/users/${userId}`, {
+axios.get(`https://online-shop-backend-qpnv.onrender.com/api/auth/admin/users/${userId}`, {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -945,7 +945,7 @@ This endpoint allows administrators to delete a user account and their associate
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.delete(`https://ecom-qybu.onrender.com/api/auth/admin/user/${userId}`, {
+axios.delete(`https://online-shop-backend-qpnv.onrender.com/api/auth/admin/user/${userId}`, {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -1107,7 +1107,7 @@ productImages.forEach(image => {
     formData.append('productImages', image);
 });
 
-axios.post('https://ecom-qybu.onrender.com/api/product/create', 
+axios.post('https://online-shop-backend-qpnv.onrender.com/api/product/create', 
     formData,
     {
         headers: {
@@ -1201,7 +1201,7 @@ None required
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get('https://ecom-qybu.onrender.com/api/product')
+axios.get('https://online-shop-backend-qpnv.onrender.com/api/product')
     .then(response => console.log(response.data))
     .catch(error => console.error(error.response.data));
 ```
@@ -1300,7 +1300,7 @@ None required
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get(`https://ecom-qybu.onrender.com/api/product/${productId}`)
+axios.get(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}`)
     .then(response => console.log(response.data))
     .catch(error => console.error(error.response.data));
 ```
@@ -1440,7 +1440,7 @@ The data should be sent as JSON. All fields are optional, but at least one must 
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.put(`https://ecom-qybu.onrender.com/api/product/${productId}`,
+axios.put(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}`,
     {
         name: "Updated Product Name",
         price: 999,
@@ -1566,7 +1566,7 @@ productImages.forEach(image => {
     formData.append('productImages', image);
 });
 
-axios.put(`https://ecom-qybu.onrender.com/api/product/${productId}/images`, 
+axios.put(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}/images`, 
     formData,
     {
         headers: {
@@ -1655,7 +1655,7 @@ This endpoint allows administrators to delete a specific product. Only accessibl
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.delete(`https://ecom-qybu.onrender.com/api/product/${productId}`, {
+axios.delete(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}`, {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -1736,7 +1736,7 @@ This endpoint allows authenticated users to add or update their review for a spe
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.post(`https://ecom-qybu.onrender.com/api/product/${productId}/review`,
+axios.post(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}/review`,
     {
         rating: 4,
         comment: "Great product! Would recommend."
@@ -1829,7 +1829,7 @@ This endpoint allows authenticated users to update their existing review for a p
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.put(`https://ecom-qybu.onrender.com/api/product/${productId}/review`,
+axios.put(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}/review`,
     {
         rating: 5,
         comment: "Updated review: Even better than I initially thought!"
@@ -1912,7 +1912,7 @@ None required
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get(`https://ecom-qybu.onrender.com/api/product/${productId}/reviews`)
+axios.get(`https://online-shop-backend-qpnv.onrender.com/api/product/${productId}/reviews`)
     .then(response => console.log(response.data))
     .catch(error => console.error(error.response.data));
 ```
@@ -2012,7 +2012,7 @@ This endpoint allows authenticated users to add or update products in their shop
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.post(`https://ecom-qybu.onrender.com/api/cart/${productId}`,
+axios.post(`https://online-shop-backend-qpnv.onrender.com/api/cart/${productId}`,
     {
         quantity: 2
     },
@@ -2099,7 +2099,7 @@ This endpoint allows authenticated users to retrieve their shopping cart details
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get('https://ecom-qybu.onrender.com/api/cart', {
+axios.get('https://online-shop-backend-qpnv.onrender.com/api/cart', {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -2213,7 +2213,7 @@ This endpoint allows authenticated users to update the quantity of a product in 
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.put("https://ecom-qybu.onrender.com/api/cart/update",
+axios.put("https://online-shop-backend-qpnv.onrender.com/api/cart/update",
     {
         productId: "product_id",
         quantity: 2
@@ -2305,7 +2305,7 @@ This endpoint allows authenticated users to remove a specific product from their
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.delete(`https://ecom-qybu.onrender.com/api/cart/remove/${productId}`, {
+axios.delete(`https://online-shop-backend-qpnv.onrender.com/api/cart/remove/${productId}`, {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -2370,7 +2370,7 @@ This endpoint allows authenticated users to remove all items from their shopping
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.delete("https://ecom-qybu.onrender.com/api/cart/clear", {
+axios.delete("https://online-shop-backend-qpnv.onrender.com/api/cart/clear", {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -2508,7 +2508,7 @@ The data should be sent as JSON with the following fields:
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.post("https://ecom-qybu.onrender.com/api/order/create",
+axios.post("https://online-shop-backend-qpnv.onrender.com/api/order/create",
     {
         items: [
             {
@@ -2619,7 +2619,7 @@ This endpoint allows authenticated users to retrieve all their orders. The order
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get("https://ecom-qybu.onrender.com/api/order/me", {
+axios.get("https://online-shop-backend-qpnv.onrender.com/api/order/me", {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -2715,7 +2715,7 @@ This endpoint allows authenticated users to retrieve details of a specific order
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get(`https://ecom-qybu.onrender.com/api/order/${orderId}`, {
+axios.get(`https://online-shop-backend-qpnv.onrender.com/api/order/${orderId}`, {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
@@ -2819,7 +2819,7 @@ This endpoint allows administrators to retrieve all orders in the system. It pro
 ### Example Usage
 #### JavaScript (Axios)
 ```javascript
-axios.get("https://ecom-qybu.onrender.com/api/order/admin/orders", {
+axios.get("https://online-shop-backend-qpnv.onrender.com/api/order/admin/orders", {
     headers: {
         "Authorization": "Bearer your_jwt_token"
     }
