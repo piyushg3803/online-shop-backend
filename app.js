@@ -30,7 +30,7 @@ app.use(helmet({
 }));
 // Allow CORS for all routes
 app.use(cors({
-    origin: '*', // or specify your frontend domain like 'https://your-frontend-site.com'
+    origin: 'http://localhost:5173/', 
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
