@@ -1,13 +1,12 @@
 const express = require("express");
 const app = express();
 const cookieParser = require("cookie-parser");
-const helmet = require('helmet');
-const path = require('path');
-const cors = require('cors');
-const ErrorHandler = require('./utils/errorHandler');
+const helmet = require("helmet");
+const path = require("path");
+const cors = require("cors");
+const ErrorHandler = require("./utils/errorHandler");
 
 // Serve static files (uploads folder) with CORS
-
 
 // Route Imports
 const authRoutes = require("./routes/authRoutes");
@@ -20,24 +19,27 @@ const orderRoutes = require("./routes/orderRoutes");
 app.use(express.json()); // for parsing JSON
 app.use(express.urlencoded({ extended: true })); // for parsing form data
 app.use(cookieParser());
-app.use(helmet({
+app.use(
+  helmet({
     contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            imgSrc: ["'self'", "http://localhost:3000", process.env.FRONT_END_URL], // Adjust for prod
-        },
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "http://localhost:3000", process.env.FRONT_END_URL], // Adjust for prod
+      },
     },
-}));
+  })
+);
 // Allow CORS for all routes
-app.use(cors({
-    origin: 'http://localhost:5173/', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }));
-   
+app.use(
+  cors({
+    origin: "*", // or specify your frontend domain like 'https://your-frontend-site.com',
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // app.use('/uploads', express.static('uploads'));
 // Routes
 app.use("/api/auth", authRoutes);
@@ -54,16 +56,16 @@ app.use("/api/order", orderRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
-    err.statusCode = err.statusCode || 500;
-    err.message = err.message || "Internal Server Error";
+  err.statusCode = err.statusCode || 500;
+  err.message = err.message || "Internal Server Error";
 
-    res.status(err.statusCode).json({
-        success: false,
-        error: {
-            message: err.message,
-            ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-        }
-    });
+  res.status(err.statusCode).json({
+    success: false,
+    error: {
+      message: err.message,
+      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    },
+  });
 });
 app.use(errorMiddleware);
 module.exports = app;
