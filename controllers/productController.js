@@ -285,8 +285,8 @@ exports.updateProductImages = async (req, res, next) => {
     const baseURL = process.env.BASE_URL;
     // Prepare new images data
     const newImages = req.files.map((file) => ({
-      url: `${baseURL}/uploads/products/${file.filename}`,
-      public_id: file.filename,
+      url: file.secure_url,
+      public_id: file.public_id,
     }));
 
     // Replace old images with new ones
@@ -313,52 +313,82 @@ exports.updateProductImages = async (req, res, next) => {
 };
 
 // ---------- Create/Update Product Review by user---------- //
-exports.createProductReview = async (req, res, next) => {
+exports.createProduct = async (req, res, next) => {
   try {
-    const { rating, comment } = req.body;
+    const {
+      name,
+      price,
+      category,
+      brand,
+      download_url,
+      stock,
+      description,
+      faqs,
+    } = req.body;
 
-    if (!rating || rating < 1 || rating > 5) {
+    if (!req.files?.length) {
+      return next(new ErrorHandler("Product images are required", 400));
+    }
+
+    // Parse JSON safely
+    let parsedDescription, parsedFaqs;
+    try {
+      parsedDescription =
+        typeof description === "string" ? JSON.parse(description) : description;
+      parsedFaqs = typeof faqs === "string" ? JSON.parse(faqs) : faqs;
+    } catch (parseError) {
       return next(
-        new ErrorHandler("Please provide a rating between 1 and 5", 400)
+        new ErrorHandler("Invalid JSON format in description or FAQs", 400)
       );
     }
 
-    const product = await Product.findById(req.params.productId);
-
-    if (!product) {
-      return next(new ErrorHandler("Product not found", 404));
-    }
-
-    // Check if user already reviewed
-    const existingReviewIndex = product.reviews.findIndex(
-      (review) => review.user.toString() === req.user._id.toString()
-    );
-
-    const review = {
-      user: req.user._id,
-      rating: Number(rating),
-      comment,
+    // Validate the payload
+    const validationPayload = {
+      name,
+      price,
+      category,
+      brand,
+      stock,
+      description: parsedDescription,
+      faqs: parsedFaqs,
+      download_url,
+      createdUser: req.user.id,
     };
 
-    if (existingReviewIndex >= 0) {
-      // Update existing review
-      product.reviews[existingReviewIndex] = review;
-    } else {
-      // Add new review
-      product.reviews.push(review);
+    const { error } = productValidationSchema.validate(validationPayload);
+    if (error) {
+      return next(new ErrorHandler(error.details[0].message, 400));
     }
 
-    await product.save();
+    // ✅ Upload images to Cloudinary
+    const uploadedImages = [];
 
-    res.status(200).json({
+    for (const file of req.files) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "products",
+      });
+      uploadedImages.push({
+        public_id: result.public_id,
+        url: result.secure_url,
+      });
+
+      // Optional: remove local copy to keep things clean
+      await fsPromises.unlink(file.path);
+    }
+
+    // ✅ Create product with Cloudinary image URLs
+    const newProduct = await Product.create({
+      ...validationPayload,
+      productImages: uploadedImages,
+    });
+
+    res.status(201).json({
       success: true,
-      message: "Review added successfully",
-      review,
+      product: newProduct,
     });
   } catch (err) {
-    return next(
-      new ErrorHandler(`Failed to create review: ${err.message}`, 500)
-    );
+    console.error(err);
+    return next(new ErrorHandler(`Server Error: ${err.message}`, 500));
   }
 };
 
@@ -477,6 +507,86 @@ exports.deleteReviewById = async (req, res, next) => {
     if (!reviewExists) {
       return next(new ErrorHandler("Review not found", 404));
     }
+    exports.createProduct = async (req, res, next) => {
+      try {
+        const {
+          name,
+          price,
+          category,
+          brand,
+          download_url,
+          stock,
+          description,
+          faqs,
+        } = req.body;
+
+        if (!req.files?.length) {
+          return next(new ErrorHandler("Product images are required", 400));
+        }
+
+        // Parse JSON safely
+        let parsedDescription, parsedFaqs;
+        try {
+          parsedDescription =
+            typeof description === "string"
+              ? JSON.parse(description)
+              : description;
+          parsedFaqs = typeof faqs === "string" ? JSON.parse(faqs) : faqs;
+        } catch (parseError) {
+          return next(
+            new ErrorHandler("Invalid JSON format in description or FAQs", 400)
+          );
+        }
+
+        // Validate the payload
+        const validationPayload = {
+          name,
+          price,
+          category,
+          brand,
+          stock,
+          description: parsedDescription,
+          faqs: parsedFaqs,
+          download_url,
+          createdUser: req.user.id,
+        };
+
+        const { error } = productValidationSchema.validate(validationPayload);
+        if (error) {
+          return next(new ErrorHandler(error.details[0].message, 400));
+        }
+
+        // ✅ Upload images to Cloudinary
+        const uploadedImages = [];
+
+        for (const file of req.files) {
+          const result = await cloudinary.uploader.upload(file.path, {
+            folder: "products",
+          });
+          uploadedImages.push({
+            public_id: result.public_id,
+            url: result.secure_url,
+          });
+
+          // Optional: remove local copy to keep things clean
+          await fsPromises.unlink(file.path);
+        }
+
+        // ✅ Create product with Cloudinary image URLs
+        const newProduct = await Product.create({
+          ...validationPayload,
+          productImages: uploadedImages,
+        });
+
+        res.status(201).json({
+          success: true,
+          product: newProduct,
+        });
+      } catch (err) {
+        console.error(err);
+        return next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+      }
+    };
 
     // Filter out the review by reviewId
     product.reviews = product.reviews.filter(
