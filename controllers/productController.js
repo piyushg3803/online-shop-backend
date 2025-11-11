@@ -72,7 +72,7 @@ exports.createProduct = async (req, res, next) => {
       return next(new ErrorHandler("Product images are required", 400));
     }
 
-    // Safely parse JSON strings
+    // Parse JSON safely
     let parsedDescription, parsedFaqs;
     try {
       parsedDescription =
@@ -84,6 +84,7 @@ exports.createProduct = async (req, res, next) => {
       );
     }
 
+    // Validate the payload
     const validationPayload = {
       name,
       price,
@@ -101,20 +102,35 @@ exports.createProduct = async (req, res, next) => {
       return next(new ErrorHandler(error.details[0].message, 400));
     }
 
-    // const baseURL = process.env.BASE_URL;
-    const productImages = req.files.map((file) => ({
-      url: file.secure_url,
-      public_id: file.public_id,
-    }));
+    // ✅ Upload images to Cloudinary
+    const uploadedImages = [];
 
+    for (const file of req.files) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "products",
+      });
+      uploadedImages.push({
+        public_id: result.public_id,
+        url: result.secure_url,
+      });
+
+      // Optional: remove local copy to keep things clean
+      await fsPromises.unlink(file.path);
+    }
+
+    // ✅ Create product with Cloudinary image URLs
     const newProduct = await Product.create({
       ...validationPayload,
-      productImages,
+      productImages: uploadedImages,
     });
 
-    res.status(201).json({ success: true, product: newProduct });
+    res.status(201).json({
+      success: true,
+      product: newProduct,
+    });
   } catch (err) {
-    return next(new ErrorHandler(err.message, 500));
+    console.error(err);
+    return next(new ErrorHandler(`Server Error: ${err.message}`, 500));
   }
 };
 
@@ -313,82 +329,52 @@ exports.updateProductImages = async (req, res, next) => {
 };
 
 // ---------- Create/Update Product Review by user---------- //
-exports.createProduct = async (req, res, next) => {
+exports.createProductReview = async (req, res, next) => {
   try {
-    const {
-      name,
-      price,
-      category,
-      brand,
-      download_url,
-      stock,
-      description,
-      faqs,
-    } = req.body;
+    const { rating, comment } = req.body;
 
-    if (!req.files?.length) {
-      return next(new ErrorHandler("Product images are required", 400));
-    }
-
-    // Parse JSON safely
-    let parsedDescription, parsedFaqs;
-    try {
-      parsedDescription =
-        typeof description === "string" ? JSON.parse(description) : description;
-      parsedFaqs = typeof faqs === "string" ? JSON.parse(faqs) : faqs;
-    } catch (parseError) {
+    if (!rating || rating < 1 || rating > 5) {
       return next(
-        new ErrorHandler("Invalid JSON format in description or FAQs", 400)
+        new ErrorHandler("Please provide a rating between 1 and 5", 400)
       );
     }
 
-    // Validate the payload
-    const validationPayload = {
-      name,
-      price,
-      category,
-      brand,
-      stock,
-      description: parsedDescription,
-      faqs: parsedFaqs,
-      download_url,
-      createdUser: req.user.id,
+    const product = await Product.findById(req.params.productId);
+
+    if (!product) {
+      return next(new ErrorHandler("Product not found", 404));
+    }
+
+    // Check if user already reviewed
+    const existingReviewIndex = product.reviews.findIndex(
+      (review) => review.user.toString() === req.user._id.toString()
+    );
+
+    const review = {
+      user: req.user._id,
+      rating: Number(rating),
+      comment,
     };
 
-    const { error } = productValidationSchema.validate(validationPayload);
-    if (error) {
-      return next(new ErrorHandler(error.details[0].message, 400));
+    if (existingReviewIndex >= 0) {
+      // Update existing review
+      product.reviews[existingReviewIndex] = review;
+    } else {
+      // Add new review
+      product.reviews.push(review);
     }
 
-    // ✅ Upload images to Cloudinary
-    const uploadedImages = [];
+    await product.save();
 
-    for (const file of req.files) {
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: "products",
-      });
-      uploadedImages.push({
-        public_id: result.public_id,
-        url: result.secure_url,
-      });
-
-      // Optional: remove local copy to keep things clean
-      await fsPromises.unlink(file.path);
-    }
-
-    // ✅ Create product with Cloudinary image URLs
-    const newProduct = await Product.create({
-      ...validationPayload,
-      productImages: uploadedImages,
-    });
-
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      product: newProduct,
+      message: "Review added successfully",
+      review,
     });
   } catch (err) {
-    console.error(err);
-    return next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+    return next(
+      new ErrorHandler(`Failed to create review: ${err.message}`, 500)
+    );
   }
 };
 
