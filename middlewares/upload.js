@@ -1,6 +1,7 @@
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const ErrorHandler = require('../utils/errorHandler');
 
 // Configuration constants
 const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5MB in bytes
@@ -14,34 +15,29 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp
 //             const timestamp = Date.now();
 //             // const random = Math.round(Math.random() * 1E9);
 //             const ext = path.extname(file.originalname);
-//             // cb(null, `${file.fieldname}-${timestamp}-${random}${ext}`);
-//             cb(null, `${file.fieldname}-${timestamp}${ext}`);
+//             // cb(null, ${file.fieldname}-${timestamp}-${random}${ext});
+//             cb(null, ${file.fieldname}-${timestamp}${ext});
 //         }
 //     });
 // };
 
 // configure cloudinary
 cloudinary.config({
-    cloud_name: process.env.COUDINARY_CLOUD_NAME,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
 // File Filter
-const fileFilter = (allowedTypes) => (req, file, cb) => {
-    if (!allowedTypes.includes(file.mimetype)) {
-        return cb(new ErrorHandler(`Only ${ allowedTypes.join(', ') } are allowed`, 400), false);
+const fileFilter = (req, file, cb) => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+        return cb(new ErrorHandler(`Only ${ALLOWED_IMAGE_TYPES.join(', ') } are allowed`, 400), false);
     }
-
-    if (file.size > FILE_SIZE_LIMIT) {
-        return cb(new ErrorHandler(`File size should be less than ${ FILE_SIZE_LIMIT / (1024 * 1024) }MB`, 400), false);
-    }
-
     cb(null, true);
 };
 
 const userStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
+    cloudinary,
     params: {
         folder: 'ecom/users',
         allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
@@ -49,8 +45,8 @@ const userStorage = new CloudinaryStorage({
     }
 })
 
-const productStorage = multer({
-    cloudinary: cloudinary,
+const productStorage = new CloudinaryStorage({
+    cloudinary,
     params: {
         folder: 'ecom/products',
         allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
@@ -62,14 +58,14 @@ const productStorage = multer({
 const userUpload = multer({
     storage: userStorage,
     limits: { fileSize: FILE_SIZE_LIMIT },
-    fileFilter: fileFilter(ALLOWED_IMAGE_TYPES)
+    fileFilter,
 }).single('profileImage');
 
 // Product Upload Configuration
 const productUpload = multer({
     storage: productStorage,
     limits: { fileSize: FILE_SIZE_LIMIT },
-    fileFilter: fileFilter(ALLOWED_IMAGE_TYPES)
+    fileFilter,
 }).array('productImages', 10);
 
 module.exports = {
