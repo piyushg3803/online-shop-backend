@@ -20,10 +20,10 @@ exports.adminDashboard = async (req, res, next) => {
 
     const totalProducts = await Product.countDocuments();
     const totalActiveProducts = await Product.countDocuments({
-      status: "active",
+      status: "Active",
     });
     const totalInactiveProducts = await Product.countDocuments({
-      status: "inactive",
+      status: "Inactive",
     });
     const productsAddedToday = await Product.countDocuments({
       createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
@@ -376,28 +376,6 @@ exports.getProductReviews = async (req, res, next) => {
     return next(
       new ErrorHandler(`Failed to fetch reviews: ${err.message}`, 500)
     );
-  }
-};
-
-// delete review by user
-exports.deleteProduct = async (req, res, next) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return next(new ErrorHandler("Product not found", 404));
-
-    // Delete all images from Cloudinary
-    for (const image of product.productImages) {
-      await cloudinary.uploader.destroy(image.public_id);
-    }
-
-    await Product.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({
-      success: true,
-      message: "Product deleted successfully",
-    });
-  } catch (err) {
-    next(new ErrorHandler(`Failed to delete product: ${err.message}`, 500));
   }
 };
 
