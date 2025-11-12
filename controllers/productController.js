@@ -260,3 +260,217 @@ exports.updateProductImages = async (req, res, next) => {
     next(new ErrorHandler(`Server Error: ${err.message}`, 500));
   }
 };
+
+// get single product reviews
+exports.getProductReviews = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.productId);
+
+    if (!product) {
+      return next(new ErrorHandler("Product not found", 404));
+    }
+
+    // Extract only the reviews array from the product
+    const reviews = product.reviews;
+
+    if (reviews.length === 0) {
+      return next(new ErrorHandler("No reviews found for this product", 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      reviews,
+    });
+  } catch (err) {
+    return next(
+      new ErrorHandler(`Failed to fetch reviews: ${err.message}`, 500)
+    );
+  }
+};
+
+// delete review by user
+exports.deleteReview = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.productId);
+
+    if (!product) {
+      return next(new ErrorHandler("Product not found", 404));
+    }
+
+    // Filter out the review
+    product.reviews = product.reviews.filter(
+      (review) => review.user.toString() !== req.user._id.toString()
+    );
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (err) {
+    return next(
+      new ErrorHandler(`Failed to delete review: ${err.message}`, 500)
+    );
+  }
+};
+
+// Update Review usnig review ID by - admin
+exports.updateReview = async (req, res, next) => {
+  try {
+    const { rating, comment } = req.body;
+    const { productId, reviewId } = req.params;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return next(
+        new ErrorHandler("Please provide a rating between 1 and 5", 400)
+      );
+    }
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return next(new ErrorHandler("Product not found", 404));
+    }
+
+    const reviewIndex = product.reviews.findIndex(
+      (r) => r._id.toString() === reviewId
+    );
+
+    if (reviewIndex === -1) {
+      return next(new ErrorHandler("Review not found or unauthorized", 404));
+    }
+
+    product.reviews[reviewIndex].rating = Number(rating);
+    product.reviews[reviewIndex].comment = comment;
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Review updated successfully",
+      review: product.reviews[reviewIndex],
+    });
+  } catch (err) {
+    return next(
+      new ErrorHandler(`Failed to update review: ${err.message}`, 500)
+    );
+  }
+};
+
+// Delete Review by reviewId - admin
+exports.deleteReviewById = async (req, res, next) => {
+  try {
+    const { id: productId, reviewId } = req.params;
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return next(new ErrorHandler("Product not found", 404));
+    }
+
+    const reviewExists = product.reviews.some(
+      (review) => review._id.toString() === reviewId
+    );
+
+    if (!reviewExists) {
+      return next(new ErrorHandler("Review not found", 404));
+    }
+    exports.createProduct = async (req, res, next) => {
+      try {
+        const {
+          name,
+          price,
+          category,
+          brand,
+          download_url,
+          stock,
+          description,
+          faqs,
+        } = req.body;
+
+        if (!req.files?.length) {
+          return next(new ErrorHandler("Product images are required", 400));
+        }
+
+        // Parse JSON safely
+        let parsedDescription, parsedFaqs;
+        try {
+          parsedDescription =
+            typeof description === "string"
+              ? JSON.parse(description)
+              : description;
+          parsedFaqs = typeof faqs === "string" ? JSON.parse(faqs) : faqs;
+        } catch (parseError) {
+          return next(
+            new ErrorHandler("Invalid JSON format in description or FAQs", 400)
+          );
+        }
+
+        // Validate the payload
+        const validationPayload = {
+          name,
+          price,
+          category,
+          brand,
+          stock,
+          description: parsedDescription,
+          faqs: parsedFaqs,
+          download_url,
+          createdUser: req.user.id,
+        };
+
+        const { error } = productValidationSchema.validate(validationPayload);
+        if (error) {
+          return next(new ErrorHandler(error.details[0].message, 400));
+        }
+
+        // ✅ Upload images to Cloudinary
+        const uploadedImages = [];
+
+        for (const file of req.files) {
+          const result = await cloudinary.uploader.upload(file.path, {
+            folder: "products",
+          });
+          uploadedImages.push({
+            public_id: result.public_id,
+            url: result.secure_url,
+          });
+
+          // Optional: remove local copy to keep things clean
+          await fsPromises.unlink(file.path);
+        }
+
+        // ✅ Create product with Cloudinary image URLs
+        const newProduct = await Product.create({
+          ...validationPayload,
+          productImages: uploadedImages,
+        });
+
+        res.status(201).json({
+          success: true,
+          product: newProduct,
+        });
+      } catch (err) {
+        console.error(err);
+        return next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+      }
+    };
+
+    // Filter out the review by reviewId
+    product.reviews = product.reviews.filter(
+      (review) => review._id.toString() !== reviewId
+    );
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (err) {
+    return next(
+      new ErrorHandler(`Failed to delete review: ${err.message}`, 500)
+    );
+  }
+};
