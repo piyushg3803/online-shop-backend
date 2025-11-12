@@ -379,6 +379,35 @@ exports.getProductReviews = async (req, res, next) => {
   }
 };
 
+// ---------- Delete Review by user--------- //
+exports.deleteReview = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.productId);
+
+    if (!product) {
+      return next(new ErrorHandler("Product not found", 404));
+    }
+
+    const userId = req.user.id || req.user._id;
+
+    // Filter out the review
+    product.reviews = product.reviews.filter(
+      (review) => review.user.toString() !== userId.toString()
+    );
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
+    });
+  } catch (err) {
+    return next(
+      new ErrorHandler(`Failed to delete review: ${err.message}`, 500)
+    );
+  }
+};
+
 // Update Review usnig review ID by - admin
 exports.updateReview = async (req, res, next) => {
   try {
