@@ -130,8 +130,7 @@ exports.createProduct = async (req, res, next) => {
 // ---------- Get All Products - Admin ---------- //
 exports.getAllProducts = async (req, res, next) => {
     try {
-        const products = await Product.find().populate("createdUser", "name email");
-        const TotalProduct = await Product.countDocuments();
+        const products = await Product.find().populate({ path: "review.user", name: "name email" });
 
         res.status(200).json({ success: true, TotalProduct, products });
     } catch (err) {
@@ -142,10 +141,10 @@ exports.getAllProducts = async (req, res, next) => {
 // ---------- Get Single Product ---------- //
 exports.getSingleProduct = async (req, res, next) => {
     try {
-        const product = await Product.findById(req.params.id).populate(
-            "createdUser",
-            "name email"
-        );
+        const product = await Product.findById(req.params.id).populate({
+            path: "review.user",
+            select: "name email"
+        });
 
         if (!product) return next(new ErrorHandler("Product not found", 404));
 
@@ -265,6 +264,7 @@ exports.updateProductImages = async (req, res, next) => {
 exports.createProductReview = async (req, res, next) => {
     try {
         const { rating, comment } = req.body;
+        const userId = req.user.id;
 
         if (!rating || rating < 1 || rating > 5) {
             return next(new ErrorHandler("Please provide a rating between 1 and 5", 400));
@@ -277,8 +277,8 @@ exports.createProductReview = async (req, res, next) => {
         }
 
         // Check if user already reviewed
-        const existingReviewIndex = product.reviews.findIndex(
-            review => review.user.toString() === req.user._id.toString()
+        const existingReviewIndex = product.reviews.find(
+            review => review.user.toString() === userId.toString()
         );
 
         const review = {
@@ -311,7 +311,12 @@ exports.createProductReview = async (req, res, next) => {
 // get single product reviews
 exports.getProductReviews = async (req, res, next) => {
     try {
-        const product = await Product.findById(req.params.productId);
+        const { productId } = req.params;
+
+        const product = await Product.findById(productId).populate({
+            path: 'reviews.user',
+            select: 'name email'
+        });
 
         if (!product) {
             return next(new ErrorHandler("Product not found", 404));
@@ -338,16 +343,17 @@ exports.getProductReviews = async (req, res, next) => {
 // delete review by user
 exports.deleteReview = async (req, res, next) => {
     try {
-        const product = await Product.findById(req.params.productId);
+
+        const { productId, reviewId } = req.params;
+
+        const product = await Product.findById(productId);
 
         if (!product) {
             return next(new ErrorHandler("Product not found", 404));
         }
 
         // Filter out the review
-        product.reviews = product.reviews.filter(
-            (review) => review.user.toString() !== req.user._id.toString()
-        );
+        product.reviews = product.reviews.id(reviewId)
 
         await product.save();
 

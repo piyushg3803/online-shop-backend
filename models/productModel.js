@@ -17,6 +17,7 @@ const faqSchema = new mongoose.Schema({
 
 const reviewSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    name: String,
     rating: { type: Number, required: true },
     comment: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
