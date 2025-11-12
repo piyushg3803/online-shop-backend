@@ -1,4 +1,5 @@
 const cloudinary = require("cloudinary").v2;
+const path = require("path");
 const Product = require("../models/productModel");
 const User = require("../models/userModel");
 const ErrorHandler = require("../utils/errorHandler");
@@ -130,9 +131,9 @@ exports.createProduct = async (req, res, next) => {
 // ---------- Get All Products - Admin ---------- //
 exports.getAllProducts = async (req, res, next) => {
     try {
-        const products = await Product.find().populate({ path: "review.user", name: "name email" });
+        const products = await Product.find().populate({ path: "review.user", select: "name email" });
 
-        res.status(200).json({ success: true, TotalProduct, products });
+        res.status(200).json({ success: true, products });
     } catch (err) {
         next(new ErrorHandler(`Failed to fetch products: ${ err.message }`, 500));
     }
@@ -263,6 +264,7 @@ exports.updateProductImages = async (req, res, next) => {
 // create product reviews
 exports.createProductReview = async (req, res, next) => {
     try {
+        const { productId } = req.params;
         const { rating, comment } = req.body;
         const userId = req.user.id;
 
@@ -270,8 +272,11 @@ exports.createProductReview = async (req, res, next) => {
             return next(new ErrorHandler("Please provide a rating between 1 and 5", 400));
         }
 
-        const product = await Product.findById(req.params.productId);
+        if (!comment) {
+            return next(new ErrorHandler("Please Enter a Comment", 400));
+        }
 
+        const product = await Product.findById(productId);
         if (!product) {
             return next(new ErrorHandler("Product not found", 404));
         }
@@ -282,9 +287,10 @@ exports.createProductReview = async (req, res, next) => {
         );
 
         const review = {
-            user: req.user._id,
+            user: userId,
             rating: Number(rating),
-            comment
+            comment,
+            createdAt: new Date()
         };
 
         if (existingReviewIndex >= 0) {
@@ -297,10 +303,15 @@ exports.createProductReview = async (req, res, next) => {
 
         await product.save();
 
-        res.status(200).json({
+        await product.populate({
+            path: 'review.user',
+            select: 'name email'
+        })
+
+        res.status(201).json({
             success: true,
             message: "Review added successfully",
-            review
+            review: product.reviews[product.reviews.length - 1]
         });
 
     } catch (err) {
@@ -323,15 +334,15 @@ exports.getProductReviews = async (req, res, next) => {
         }
 
         // Extract only the reviews array from the product
-        const reviews = product.reviews;
+        // const reviews = product.reviews;
 
-        if (reviews.length === 0) {
-            return next(new ErrorHandler("No reviews found for this product", 404));
-        }
+        // if (reviews.length === 0) {
+        //     return next(new ErrorHandler("No reviews found for this product", 404));
+        // }
 
         res.status(200).json({
             success: true,
-            reviews,
+            reviews: product.reviews
         });
     } catch (err) {
         return next(
@@ -343,23 +354,39 @@ exports.getProductReviews = async (req, res, next) => {
 // delete review by user
 exports.deleteReview = async (req, res, next) => {
     try {
-
         const { productId, reviewId } = req.params;
 
         const product = await Product.findById(productId);
-
         if (!product) {
-            return next(new ErrorHandler("Product not found", 404));
+            return next(new ErrorHandler('Product not found', 404));
         }
 
-        // Filter out the review
-        product.reviews = product.reviews.id(reviewId)
+        const review = product.reviews.id(reviewId);
+        if (!review) {
+            return next(new ErrorHandler('Review not found', 404));
+        }
+
+        // Check if user owns the review
+        if (review.user.toString() !== req.user.id.toString()) {
+            return next(new ErrorHandler('Unauthorized', 403));
+        }
+
+        product.reviews.id(reviewId).deleteOne();
+
+        // Update product rating
+        if (product.reviews.length > 0) {
+            const totalRating = product.reviews.reduce((sum, r) => sum + r.rating, 0);
+            product.ratings = (totalRating / product.reviews.length).toFixed(1);
+        } else {
+            product.ratings = 0;
+        }
+        product.numReviews = product.reviews.length;
 
         await product.save();
 
         res.status(200).json({
             success: true,
-            message: "Review deleted successfully",
+            message: 'Review deleted successfully'
         });
     } catch (err) {
         return next(
