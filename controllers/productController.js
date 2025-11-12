@@ -261,6 +261,10 @@ exports.updateProductImages = async (req, res, next) => {
   }
 };
 
+// create product reviews
+exports.createProductReview = async (req, res, next) => {
+};
+
 // get single product reviews
 exports.getProductReviews = async (req, res, next) => {
   try {
