@@ -4,7 +4,7 @@ const upload = require('../middlewares/upload')
 
 // Internal Imports
 const userController = require('../controllers/userController');
-const { authMiddleware, authorizeRoles, isAuthenticated } = require('../middlewares/auth');
+const { authMiddleware, authorizeRoles } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.get('/user/logout', authMiddleware, userController.logout);
 // ✅ User Profile Routes
 router.get('/user/profile', authMiddleware, userController.getProfile);
 router.put('/user/profile', authMiddleware, userController.updateProfile);
-router.post('/profile/image', isAuthenticated, upload, userController.updateProfileImage);
+router.post('/profile/image', upload, userController.updateProfileImage);
 
 // ✅ User Password Routes
 router.put('/user/password-update', authMiddleware, userController.updatePassword);
