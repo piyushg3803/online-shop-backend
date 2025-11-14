@@ -59,7 +59,7 @@ const upload = multer({
     storage: userStorage,
     limits: { fileSize: FILE_SIZE_LIMIT },
     fileFilter,
-});
+}).single('profileImage');
 
 // Product Upload Configuration
 const multipleProductUpload = multer({
