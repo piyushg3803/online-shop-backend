@@ -55,21 +55,21 @@ const productStorage = new CloudinaryStorage({
 })
 
 // User Upload Configuration
-const userUpload = multer({
+const upload = multer({
     storage: userStorage,
     limits: { fileSize: FILE_SIZE_LIMIT },
     fileFilter,
 });
 
 // Product Upload Configuration
-const productUpload = multer({
+const multipleProductUpload = multer({
     storage: productStorage,
     limits: { fileSize: FILE_SIZE_LIMIT },
     fileFilter,
 }).array('productImages', 10);
 
 module.exports = {
-    upload: userUpload,
-    multipleProductUpload: productUpload,
+    upload,
+    multipleProductUpload,
     cloudinary
 };
