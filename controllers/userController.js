@@ -182,72 +182,86 @@ exports.updateProfile = async (req, res, next) => {
 // ----------  Profile Image Update ---------- //
 exports.updateProfileImage = async (req, res, next) => {
     try {
-
-        const userImage = req.files;
-        if (!userImage) {
+        // normalize files (support multer.single -> req.file and multer.array/fields -> req.files)
+        const files = (req.files && req.files.length) ? req.files : (req.file ? [req.file] : []);
+        if (!files.length) {
             return next(new ErrorHandler("Please upload an image", 400));
         }
 
-        // Add file size validation (5MB limit)
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
         const maxSize = 5 * 1024 * 1024; // 5MB
-        if (req.file.size > maxSize) {
-            await fsPromises.unlink(req.file.path);
-            return next(new ErrorHandler("Image size should be less than 5MB", 400));
-        }
 
-        // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-        if (!allowedTypes.includes(req.file.mimetype)) {
-            await fsPromises.unlink(req.file.path);
-            return next(new ErrorHandler("Please upload only JPG, JPEG or PNG images", 400));
-        }
-
-        // Find user
         const user = await User.findById(req.user.id);
-        if (!user) {
-            return next(new ErrorHandler("User not found", 404));
-        }
+        if (!user) return next(new ErrorHandler("User not found", 404));
 
-        const profileImage = [];
+        const uploadedImages = [];
 
-        for (const file of userImage) {
-            if (file.secure_url || (file.path && file.path === 'string' && file.path.startsWith('http'))) {
-                profileImage.push({
+        for (const file of files) {
+            // Validate mime type (if available)
+            if (file.mimetype && !allowedTypes.includes(file.mimetype)) {
+                // cleanup any local temp files from this request
+                if (file.path && typeof file.path === 'string' && !file.path.startsWith('http')) {
+                    await fsPromises.unlink(file.path).catch(() => { });
+                }
+                return next(new ErrorHandler("Please upload only JPG, JPEG, PNG or WEBP images", 400));
+            }
+
+            // Validate size (if available)
+            if (file.size && file.size > maxSize) {
+                if (file.path && typeof file.path === 'string' && !file.path.startsWith('http')) {
+                    await fsPromises.unlink(file.path).catch(() => { });
+                }
+                return next(new ErrorHandler("Image size should be less than 5MB", 400));
+            }
+
+            // If middleware already uploaded to Cloudinary (multer-storage-cloudinary), use returned fields
+            if (file.secure_url || (file.path && typeof file.path === 'string' && file.path.startsWith('http'))) {
+                uploadedImages.push({
                     url: file.secure_url || file.path,
-                    public_id: file.public_id || file.pathname || null
-                })
+                    public_id: file.public_id || file.filename || null
+                });
                 continue;
             }
 
+            // Otherwise upload local file to Cloudinary
             const result = await cloudinary.uploader.upload(file.path, {
                 folder: 'userImage',
                 transformation: [{ width: 800, height: 800, crop: 'limit' }]
             });
 
-            profileImage.push({ url: result.secure_url, public_id: result.public_id });
+            uploadedImages.push({ url: result.secure_url, public_id: result.public_id });
+
+            // remove local temp file
+            if (file.path && typeof file.path === 'string' && !file.path.startsWith('http')) {
+                await fsPromises.unlink(file.path).catch(() => { });
+            }
         }
 
-        user.profileImage = profileImage.length === 1 ? profileImage[0] : profileImage;
-
+        // Save single object for single upload, array for multiple
+        user.profileImage = uploadedImages.length === 1 ? uploadedImages[0] : uploadedImages;
         await user.save();
 
         res.status(200).json({
             success: true,
             message: "Profile image updated successfully",
-            data: {
-                profileImage: user.profileImage
-            }
+            data: { profileImage: user.profileImage }
         });
-
     } catch (err) {
-        // Cleanup uploaded file if error occurs
-        if (req.file) {
-            await fsPromises.unlink(req.file.path).catch(console.error);
+        // attempt to cleanup any local temp files
+        try {
+            const files = (req.files && req.files.length) ? req.files : (req.file ? [req.file] : []);
+            for (const f of files) {
+                if (f && f.path && typeof f.path === 'string' && !f.path.startsWith('http')) {
+                    await fsPromises.unlink(f.path).catch(() => { });
+                }
+            }
+        } catch (cleanupErr) {
+            console.error('Cleanup error:', cleanupErr);
         }
         next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
-    
+
 // ----------  Password Update ---------- //
 exports.updatePassword = async (req, res, next) => {
     try {
