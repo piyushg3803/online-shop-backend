@@ -4,8 +4,7 @@ const upload = require('../middlewares/upload')
 
 // Internal Imports
 const userController = require('../controllers/userController');
-const { authMiddleware, authorizeRoles } = require('../middlewares/auth');
-const { upload } = require("../middlewares/upload"); // Destructure upload from the exported object
+const { authMiddleware, authorizeRoles, isAuthenticated } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -17,7 +16,7 @@ router.get('/user/logout', authMiddleware, userController.logout);
 // ✅ User Profile Routes
 router.get('/user/profile', authMiddleware, userController.getProfile);
 router.put('/user/profile', authMiddleware, userController.updateProfile);
-router.patch('/user/profile-image', authMiddleware, upload, userController.updateProfileImage);
+router.post('/profile/image', isAuthenticated, upload.single('profileImage'), userController.updateProfileImage);
 
 // ✅ User Password Routes
 router.put('/user/password-update', authMiddleware, userController.updatePassword);

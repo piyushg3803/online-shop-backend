@@ -31,7 +31,7 @@ cloudinary.config({
 // File Filter
 const fileFilter = (req, file, cb) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
-        return cb(new ErrorHandler(`Only JPG/JPEG/PNG/WEBP are allowed`, 400), false);
+        return cb(new Error(`Only JPG/JPEG/PNG/WEBP are allowed`), false);
     }
     cb(null, true);
 };
@@ -59,7 +59,7 @@ const userUpload = multer({
     storage: userStorage,
     limits: { fileSize: FILE_SIZE_LIMIT },
     fileFilter,
-}).single('profileImage');
+});
 
 // Product Upload Configuration
 const productUpload = multer({
