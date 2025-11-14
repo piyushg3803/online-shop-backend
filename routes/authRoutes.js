@@ -1,5 +1,6 @@
 // External Imports
 const express = require('express');
+const upload = require('../middlewares/upload')
 
 // Internal Imports
 const userController = require('../controllers/userController');
