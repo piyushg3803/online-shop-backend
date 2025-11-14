@@ -296,7 +296,7 @@ exports.createProductReview = async (req, res, next) => {
         if (existingReviewIndex >= 0) {
             // Update existing review
             product.reviews[existingReviewIndex] = review;
-        } else {
+        } else {    
             // Add new review
             product.reviews.push(review);
         }

@@ -17,6 +17,9 @@ const {
     resetPasswordTokenValidation,
     updatePasswordValidation
 } = require('../validators/authValidator');
+const { JsonWebTokenError } = require('jsonwebtoken');
+const { profile } = require('console');
+const cloudinary = require("cloudinary").v2
 
 //////////////////////////////////////////// USER SIDE ////////////////////////////////////////////
 
@@ -63,7 +66,7 @@ exports.register = async (req, res, next) => {
         });
 
     } catch (err) {
-        next(new ErrorHandler(`Registration failed: ${err.message}`, 500));
+        next(new ErrorHandler(`Registration failed: ${ err.message }`, 500));
     }
 };
 
@@ -86,6 +89,7 @@ exports.login = async (req, res, next) => {
         user.loggedIn = true;
         await user.save();
         const token = user.generateToken(user.id);
+
         // Set secure and sameSite options for cookies
         res.cookie('jwt', token, {
             expires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
@@ -100,7 +104,7 @@ exports.login = async (req, res, next) => {
         res.status(200).json({ success: true, message: "Login successful", data: userData, token });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -114,7 +118,7 @@ exports.logout = async (req, res, next) => {
         res.status(200).json({ success: true, message: "Logged out successfully" });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -146,11 +150,13 @@ exports.getProfile = async (req, res, next) => {
 
         res.status(200).json(profile);
 
+        const isExpired = jw
+
     } catch (err) {
         next(new ErrorHandler(
             err.name === 'CastError'
                 ? "Invalid user ID format"
-                : `Server Error: ${err.message}`,
+                : `Server Error: ${ err.message }`,
             err.name === 'CastError' ? 400 : 500
         ));
     }
@@ -159,7 +165,6 @@ exports.getProfile = async (req, res, next) => {
 // ----------  Profile Update ---------- //
 exports.updateProfile = async (req, res, next) => {
     try {
-
         const { error } = profileUpdateValidation(req.body);
         if (error) return next(new ErrorHandler(error.details[0].message, 400));
 
@@ -170,15 +175,16 @@ exports.updateProfile = async (req, res, next) => {
         res.status(200).json({ success: true, message: "Profile updated successfully", data: user });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
 // ----------  Profile Image Update ---------- //
 exports.updateProfileImage = async (req, res, next) => {
     try {
-        // Basic validation
-        if (!req.file) {
+
+        const userImage = req.files;
+        if (!userImage) {
             return next(new ErrorHandler("Please upload an image", 400));
         }
 
@@ -199,27 +205,30 @@ exports.updateProfileImage = async (req, res, next) => {
         // Find user
         const user = await User.findById(req.user.id);
         if (!user) {
-            await fsPromises.unlink(req.file.path);
             return next(new ErrorHandler("User not found", 404));
         }
 
-        // Delete old image if exists
-        if (user.profileImage) {
-            const oldImagePath = path.join(__dirname, '..', 'uploads', 'users', path.basename(user.profileImage));
+        const profileImage = [];
 
-            try {
-                await fsPromises.unlink(oldImagePath);
-            } catch (error) {
-                // Only log error if file exists but couldn't be deleted
-                if (error.code !== 'ENOENT') {
-                    console.error("Error deleting old image:", error);
-                }
+        for (const file of userImage) {
+            if (file.secure_url || (file.path && file.path === 'string' && file.path.startsWith('http'))) {
+                profileImage.push({
+                    url: file.secure_url || file.path,
+                    public_id: file.public_id || file.pathname || null
+                })
+                continue;
             }
+
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'userImage',
+                transformation: [{ width: 800, height: 800, crop: 'limit' }]
+            });
+
+            profileImage.push({ url: result.secure_url, public_id: result.public_id });
         }
 
-        // Construct the URL path for the profile image
-        const baseURL = process.env.BASE_URL;
-        user.profileImage = `${baseURL}/uploads/users/${req.file.filename}`;
+        user.profileImage = profileImage.length === 1 ? profileImage[0] : profileImage;
+
         await user.save();
 
         res.status(200).json({
@@ -235,10 +244,10 @@ exports.updateProfileImage = async (req, res, next) => {
         if (req.file) {
             await fsPromises.unlink(req.file.path).catch(console.error);
         }
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
-
+    
 // ----------  Password Update ---------- //
 exports.updatePassword = async (req, res, next) => {
     try {
@@ -266,7 +275,7 @@ exports.updatePassword = async (req, res, next) => {
         res.status(200).json({ success: true, message: "Password updated successfully" });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -287,10 +296,10 @@ exports.forgotPassword = async (req, res, next) => {
         await user.save({ validateBeforeSave: false });
 
         // Create reset password URL
-        const resetPasswordUrl = `${process.env.CORS_ORIGIN}/password-reset/${resetToken}`;
+        const resetPasswordUrl = `${ process.env.CORS_ORIGIN }/password-reset/${ resetToken }`;
         // const resetPasswordUrl = `${process.env.CORS_ORIGIN}/password-reset?token=${resetToken}`;
 
-        const message = `Your password reset link (valid for 10 minutes):\n\n${resetPasswordUrl}\n\nIf you didn't request this, please ignore this email.`;
+        const message = `Your password reset link (valid for 10 minutes):\n\n${ resetPasswordUrl }\n\nIf you didn't request this, please ignore this email.`;
 
         try {
             await sendEmail({
@@ -310,7 +319,7 @@ exports.forgotPassword = async (req, res, next) => {
             return next(new ErrorHandler("Email could not be sent", 500));
         }
     } catch (error) {
-        next(new ErrorHandler(`Server Error: ${error.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ error.message }`, 500));
     }
 };
 
@@ -355,7 +364,7 @@ exports.resetPassword = async (req, res, next) => {
             message: "Password reset successful"
         });
     } catch (error) {
-        next(new ErrorHandler(`Server Error: ${error.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ error.message }`, 500));
     }
 };
 
@@ -392,7 +401,7 @@ exports.addToWatchlist = async (req, res, next) => {
             data: watchlist
         });
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -410,7 +419,7 @@ exports.getWatchlist = async (req, res, next) => {
             data: watchlist
         });
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -436,7 +445,7 @@ exports.removeFromWatchlist = async (req, res, next) => {
             data: watchlist
         });
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -463,7 +472,7 @@ exports.getAllUsers = async (req, res, next) => {
         });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
@@ -499,7 +508,7 @@ exports.getUserDetails = async (req, res, next) => {
         next(new ErrorHandler(
             err.name === 'CastError'
                 ? "Invalid user ID format"
-                : `Server Error: ${err.message}`,
+                : `Server Error: ${ err.message }`,
             err.name === 'CastError' ? 400 : 500
         ));
     }
@@ -524,7 +533,7 @@ exports.updateUser = async (req, res, next) => {
         res.status(200).json({ success: true, message: "User updated successfully", data: updatedUser });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 }
 
@@ -553,7 +562,7 @@ exports.deleteUser = async (req, res, next) => {
         res.status(200).json({ success: true, message: "User and profile image deleted successfully" });
 
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 }
 
@@ -571,7 +580,7 @@ exports.userWatchlist = async (req, res, next) => {
             data: watchlist
         });
     } catch (err) {
-        next(new ErrorHandler(`Server Error: ${err.message}`, 500));
+        next(new ErrorHandler(`Server Error: ${ err.message }`, 500));
     }
 };
 
