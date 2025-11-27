@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const crypto = require('crypto');
 const jwt = require("jsonwebtoken");
+const { string } = require("joi");
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -25,9 +26,14 @@ const userSchema = new mongoose.Schema({
         match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
     },
     profileImage: {
-        type: String,
-        default: '',
-        trim: true
+        url: {
+            type: String,
+            default: null
+        },
+        public_id: {
+            type: String,
+            default: null
+        }
     },
     password: {
         type: String,
