@@ -150,8 +150,6 @@ exports.getProfile = async (req, res, next) => {
 
         res.status(200).json(profile);
 
-        const isExpired = jw
-
     } catch (err) {
         next(new ErrorHandler(
             err.name === 'CastError'
@@ -472,7 +470,7 @@ exports.getAllUsers = async (req, res, next) => {
     try {
         const users = await User.find({ role: "user" })
             .select("-password -resetPasswordToken -resetPasswordExpire")
-            .sort({ create_At: 1 });
+            .sort({ createdAt: 1 });
 
         if (!users) return next(new ErrorHandler("No users found", 404));
 

@@ -124,13 +124,13 @@ exports.updateOrderStatus = async (req, res, next) => {
             return next(new ErrorHandler('Order not found', 404));
         }
 
-        if (order.status === 'downloaded') {
+        if (order.status === 'delivered') {
             return next(new ErrorHandler('Order has already been delivered', 400));
         }
 
         order.status = req.body.status;
 
-        if (req.body.status === 'downloaded') {
+        if (req.body.status === 'delivered') {
             order.deliveredAt = Date.now();
         }
 

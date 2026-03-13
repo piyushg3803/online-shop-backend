@@ -2,6 +2,7 @@ const cloudinary = require("cloudinary").v2;
 const path = require("path");
 const Product = require("../models/productModel");
 const User = require("../models/userModel");
+const Order = require("../models/orderModel");
 const ErrorHandler = require("../utils/errorHandler");
 const {
   productValidationSchema,
@@ -29,6 +30,18 @@ exports.adminDashboard = async (req, res, next) => {
       createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
     });
 
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ status: "pending" });
+    const processingOrders = await Order.countDocuments({ status: "processing" });
+    const shippedOrders = await Order.countDocuments({ status: "shipped" });
+    const deliveredOrders = await Order.countDocuments({ status: "delivered" });
+    const cancelledOrders = await Order.countDocuments({ status: "cancelled" });
+    const revenueResult = await Order.aggregate([
+      { $match: { status: { $ne: "cancelled" } } },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } },
+    ]);
+    const totalRevenue = revenueResult[0]?.totalRevenue || 0;
+
     res.status(200).json({
       success: true,
       message: "Admin Dashboard",
@@ -39,6 +52,15 @@ exports.adminDashboard = async (req, res, next) => {
           totalActiveProducts,
           totalInactiveProducts,
           productsAddedToday,
+        },
+        orders: {
+          totalOrders,
+          pendingOrders,
+          processingOrders,
+          shippedOrders,
+          deliveredOrders,
+          cancelledOrders,
+          totalRevenue,
         },
       },
     });
@@ -128,15 +150,64 @@ exports.createProduct = async (req, res, next) => {
   }
 };
 
-// ---------- Get All Products - Admin ---------- //
+// Helper to escape special regex characters to prevent regex injection
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// ---------- Get All Products ---------- //
 exports.getAllProducts = async (req, res, next) => {
   try {
-    const products = await Product.find().populate({
-      path: "reviews.user",
-      select: "name email",
-    });
+    const { keyword, category, brand, minPrice, maxPrice, minRating, status, page, limit } = req.query;
 
-    res.status(200).json({ success: true, products });
+    const conditions = [];
+
+    if (keyword) {
+      const safe = escapeRegex(keyword);
+      conditions.push({
+        $or: [
+          { name: { $regex: safe, $options: "i" } },
+          { category: { $regex: safe, $options: "i" } },
+          { brand: { $regex: safe, $options: "i" } },
+        ],
+      });
+    }
+    if (category) conditions.push({ category: { $regex: escapeRegex(category), $options: "i" } });
+    if (brand) conditions.push({ brand: { $regex: escapeRegex(brand), $options: "i" } });
+    if (status) conditions.push({ status });
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const priceFilter = {};
+      if (minPrice !== undefined) priceFilter.$gte = Number(minPrice);
+      if (maxPrice !== undefined) priceFilter.$lte = Number(maxPrice);
+      conditions.push({ price: priceFilter });
+    }
+    if (minRating !== undefined) {
+      conditions.push({ ratings: { $gte: Number(minRating) } });
+    }
+
+    const filter = conditions.length > 0 ? { $and: conditions } : {};
+
+    const parsedPage = parseInt(page, 10);
+    const parsedLimit = parseInt(limit, 10);
+    const pageNum = !isNaN(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const pageSize = !isNaN(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 20;
+    const skip = (pageNum - 1) * pageSize;
+
+    const [products, totalCount] = await Promise.all([
+      Product.find(filter)
+        .populate({ path: "reviews.user", select: "name email" })
+        .skip(skip)
+        .limit(pageSize),
+      Product.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      totalCount,
+      page: pageNum,
+      pages: Math.ceil(totalCount / pageSize),
+      products,
+    });
   } catch (err) {
     next(new ErrorHandler(`Failed to fetch products: ${err.message}`, 500));
   }
