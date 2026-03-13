@@ -4,9 +4,8 @@ const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const path = require("path");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const ErrorHandler = require("./utils/errorHandler");
-
-// Serve static files (uploads folder) with CORS
 
 // Route Imports
 const authRoutes = require("./routes/authRoutes");
@@ -29,30 +28,46 @@ app.use(
     },
   })
 );
-// Allow CORS for all routes
+// Allow CORS for configured origins
 app.use(
   cors({
-    origin: "*", // or specify your frontend domain like 'https://your-frontend-site.com',
+    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
+// Rate limiting for auth routes (100 requests per 15 minutes)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { success: false, message: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// General rate limiter for all other API routes (300 requests per 15 minutes)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { success: false, message: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-// app.use('/uploads', express.static('uploads'));
 // Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/product", productRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/order", orderRoutes);
-
-// Error Middleware
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/product", apiLimiter, productRoutes);
+app.use("/api/cart", apiLimiter, cartRoutes);
+app.use("/api/order", apiLimiter, orderRoutes);
 
 // Handle 404 errors
-// app.all(/(.*)/, (req, res, next) => {
-//     next(new ErrorHandler(`Can't find ${req.originalUrl} on this server!`, 404));
-// });
+app.all("*", (req, res, next) => {
+    next(new ErrorHandler(`Can't find ${req.originalUrl} on this server!`, 404));
+});
 
 // Global error handler
 app.use((err, req, res, next) => {
